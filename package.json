@@ -3,8 +3,8 @@
   "name": "bart-departures",
   "title": "BART Departures",
   "description": "View real-time BART departures for a selected station",
-  "icon": "icon.png",
-  "author": "drewbie",
+  "icon": "bart.png",
+  "author": "drewkiimon",
   "categories": [
     "Productivity"
   ],

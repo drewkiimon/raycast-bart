@@ -1,4 +1,4 @@
-import { isArray, isPlainObject, isString } from "lodash";
+import { isArray, isPlainObject, isString } from 'lodash';
 
 export type Station = {
   name: string;
@@ -16,25 +16,32 @@ export type Departure = {
 };
 
 type JsonRecord = Record<string, unknown>;
+type StationListResponse = {
+  stations: {
+    station: unknown[];
+  };
+};
+type DepartureEstimatesResponse = {
+  station: unknown[];
+};
 
-const API_BASE_URL = "https://api.bart.gov/api/";
+const API_BASE_URL = 'https://api.bart.gov/api/';
 const REQUEST_TIMEOUT_MS = 10_000;
 // This is a public API token that is easy to rotate. Feel free to use it if you want or apply for your own at
 // https://www.bart.gov/schedules/developers/api
 // Keep the repository value empty; a maintainer may set a local token here without exposing it in source control.
-const BART_API_KEY = "ZJAY-5AUJ-9IWT-DWEI";
+const BART_API_KEY = 'ZJAY-5AUJ-9IWT-DWEI';
 
 export class BARTApiError extends Error {
   constructor(message: string) {
     super(message);
-    this.name = "BARTApiError";
+    this.name = 'BARTApiError';
   }
 }
 
-export const fetchStations = async (): Promise<Station[]> => {
-  const root = await requestBART("stn.aspx", { cmd: "stns" });
-  const stationsContainer = asRecord(root.stations);
-  const stations = asArray(stationsContainer?.station)
+export const getStations = async (): Promise<Station[]> => {
+  const { stations: stationList } = await getStationList();
+  const stations = stationList.station
     .reduce<Station[]>((validStations, stationValue) => {
       const station = toStation(stationValue);
       if (station) validStations.push(station);
@@ -43,17 +50,17 @@ export const fetchStations = async (): Promise<Station[]> => {
     .sort((left, right) => left.name.localeCompare(right.name));
 
   if (stations.length === 0) {
-    throw new BARTApiError("BART did not return any stations.");
+    throw new BARTApiError('BART did not return any stations.');
   }
 
   return stations;
 };
 
-export const fetchDepartures = async (stationAbbr: string): Promise<Departure[]> => {
-  const root = await requestBART("etd.aspx", { cmd: "etd", orig: stationAbbr });
+export const getDepartures = async (stationAbbr: string): Promise<Departure[]> => {
+  const { station: stations } = await getDepartureEstimates(stationAbbr);
   const departures: Departure[] = [];
 
-  for (const stationValue of asArray(root.station)) {
+  for (const stationValue of stations) {
     const station = asRecord(stationValue);
     if (!station) continue;
 
@@ -61,21 +68,29 @@ export const fetchDepartures = async (stationAbbr: string): Promise<Departure[]>
       const etd = asRecord(etdValue);
       if (!etd) continue;
 
-      const destination = stringValue(etd.destination) ?? "Unknown destination";
+      const destination = stringValue(etd.destination) ?? 'Unknown destination';
       const destinationAbbr = stringValue(etd.abbreviation) ?? destination;
       const estimates = asArray(etd.estimate);
 
       estimates.forEach((estimateValue, index) => {
         const estimate = asRecord(estimateValue);
-        if (!estimate || stringValue(estimate.cancelflag) === "1") return;
+        if (!estimate || stringValue(estimate.cancelflag) === '1') return;
 
-        const minutes = stringValue(estimate.minutes) ?? "Unknown";
-        const line = stringValue(estimate.color) ?? "Unknown";
+        const minutes = stringValue(estimate.minutes) ?? 'Unknown';
+        const line = stringValue(estimate.color) ?? 'Unknown';
         const platform = stringValue(estimate.platform);
         const direction = stringValue(estimate.direction);
 
         departures.push({
-          id: [stationAbbr, destinationAbbr, minutes, platform ?? "", direction ?? "", line, index].join(":"),
+          id: [
+            stationAbbr,
+            destinationAbbr,
+            minutes,
+            platform ?? '',
+            direction ?? '',
+            line,
+            index,
+          ].join(':'),
           destination,
           minutes,
           line,
@@ -88,17 +103,45 @@ export const fetchDepartures = async (stationAbbr: string): Promise<Departure[]>
 
   return departures.sort((left, right) => {
     const minutesDifference = minutesSortValue(left.minutes) - minutesSortValue(right.minutes);
-    return minutesDifference === 0 ? left.destination.localeCompare(right.destination) : minutesDifference;
+    return minutesDifference === 0
+      ? left.destination.localeCompare(right.destination)
+      : minutesDifference;
   });
 };
 
-const requestBART = async (endpoint: string, parameters: Record<string, string>): Promise<JsonRecord> => {
+const getStationList = async (): Promise<StationListResponse> => {
+  const root = await requestBART('stn.aspx', { cmd: 'stns' });
+  const stations = asRecord(root.stations);
+  const station = arrayValue(stations?.station);
+
+  if (!stations || !station) {
+    throw new BARTApiError('BART returned an unexpected station-list response.');
+  }
+
+  return { stations: { station } };
+};
+
+const getDepartureEstimates = async (stationAbbr: string): Promise<DepartureEstimatesResponse> => {
+  const root = await requestBART('etd.aspx', { cmd: 'etd', orig: stationAbbr });
+  const station = arrayValue(root.station);
+
+  if (!station) {
+    throw new BARTApiError('BART returned an unexpected departure-estimates response.');
+  }
+
+  return { station };
+};
+
+const requestBART = async (
+  endpoint: string,
+  parameters: Record<string, string>,
+): Promise<JsonRecord> => {
   if (!BART_API_KEY) {
-    throw new BARTApiError("BART API access is not configured.");
+    throw new BARTApiError('BART API access is not configured.');
   }
 
   const url = new URL(endpoint, API_BASE_URL);
-  url.search = new URLSearchParams({ ...parameters, key: BART_API_KEY, json: "y" }).toString();
+  url.search = new URLSearchParams({ ...parameters, key: BART_API_KEY, json: 'y' }).toString();
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -111,13 +154,13 @@ const requestBART = async (endpoint: string, parameters: Record<string, string>)
     }
 
     const responseBody: unknown = await response.json().catch(() => {
-      throw new BARTApiError("BART returned an unreadable response.");
+      throw new BARTApiError('BART returned an unreadable response.');
     });
     const root = asRecord(responseBody)?.root;
     const rootRecord = asRecord(root);
 
     if (!rootRecord) {
-      throw new BARTApiError("BART returned an unexpected response.");
+      throw new BARTApiError('BART returned an unexpected response.');
     }
 
     const message = responseMessage(rootRecord.message);
@@ -128,11 +171,11 @@ const requestBART = async (endpoint: string, parameters: Record<string, string>)
     return rootRecord;
   } catch (error) {
     if (error instanceof BARTApiError) throw error;
-    if (error instanceof Error && error.name === "AbortError") {
-      throw new BARTApiError("BART did not respond within 10 seconds.");
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new BARTApiError('BART did not respond within 10 seconds.');
     }
 
-    throw new BARTApiError("Unable to reach BART. Check your internet connection and try again.");
+    throw new BARTApiError('Unable to reach BART. Check your internet connection and try again.');
   } finally {
     clearTimeout(timeout);
   }
@@ -148,14 +191,18 @@ const toStation = (value: unknown): Station | undefined => {
   return { name, abbr, city: stringValue(station?.city) };
 };
 
-const asRecord = (value: unknown): JsonRecord | undefined => (isPlainObject(value) ? (value as JsonRecord) : undefined);
+const asRecord = (value: unknown): JsonRecord | undefined =>
+  isPlainObject(value) ? (value as JsonRecord) : undefined;
 
-const asArray = (value: unknown): unknown[] => (isArray(value) ? value : []);
+const arrayValue = (value: unknown): unknown[] | undefined => (isArray(value) ? value : undefined);
 
-const stringValue = (value: unknown): string | undefined => (isString(value) && value.trim() ? value : undefined);
+const asArray = (value: unknown): unknown[] => arrayValue(value) ?? [];
+
+const stringValue = (value: unknown): string | undefined =>
+  isString(value) && value.trim() ? value : undefined;
 
 const responseMessage = (value: unknown): string | undefined => {
-  if (typeof value === "string" && value.trim()) return value.trim();
+  if (stringValue(value)) return (value as string).trim();
 
   const message = asRecord(value);
   const error = stringValue(message?.error) ?? stringValue(message?.message);
@@ -163,7 +210,7 @@ const responseMessage = (value: unknown): string | undefined => {
 };
 
 const minutesSortValue = (minutes: string): number => {
-  if (minutes.toLowerCase() === "leaving") return 0;
+  if (minutes.toLowerCase() === 'leaving') return 0;
 
   const parsed = Number.parseInt(minutes, 10);
   return Number.isFinite(parsed) ? parsed : Number.POSITIVE_INFINITY;
