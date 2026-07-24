@@ -1,0 +1,50 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "bart-departures",
+  "title": "BART Departures",
+  "description": "View real-time BART departures for a selected station",
+  "icon": "icon.png",
+  "author": "drewbie",
+  "categories": [
+    "Productivity"
+  ],
+  "license": "MIT",
+  "commands": [
+    {
+      "name": "index",
+      "title": "BART Departures",
+      "description": "View real-time departures for a BART station",
+      "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "bartApiKey",
+      "title": "BART API Key",
+      "description": "Your personal BART Legacy API key. It is stored securely by Raycast.",
+      "type": "password",
+      "required": true,
+      "placeholder": "Enter your BART API key"
+    }
+  ],
+  "dependencies": {
+    "@raycast/api": "latest",
+    "lodash": "^4.18.1"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^1.0.6",
+    "@types/lodash": "^4.17.24",
+    "@types/node": "18.18.4",
+    "@typescript-eslint/eslint-plugin": "^5.62.0",
+    "@typescript-eslint/parser": "^5.62.0",
+    "eslint": "^8.51.0",
+    "prettier": "^3.0.3",
+    "typescript": "^5.2.2"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint"
+  }
+}
