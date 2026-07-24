@@ -1,4 +1,4 @@
-import { Action, ActionPanel, Color, getPreferenceValues, Icon, List, LocalStorage } from "@raycast/api";
+import { Action, ActionPanel, Color, Icon, List, LocalStorage } from "@raycast/api";
 import { capitalize, compact, isPlainObject, isString } from "lodash";
 import { useCallback, useEffect, useState } from "react";
 import { Departure, fetchDepartures, fetchStations, Station } from "./bart-api";
@@ -16,15 +16,9 @@ const BART_LINE_COLORS: Record<string, Color> = {
   yellow: Color.Yellow,
 };
 
-type BARTPreferences = {
-  bartApiKey: string;
-};
-
 type Screen = { name: typeof SCREEN.DEPARTURES; station: Station } | { name: typeof SCREEN.STATIONS };
 
 const BARTDepartures = () => {
-  const { bartApiKey } = getPreferenceValues<BARTPreferences>();
-  const apiKey = bartApiKey.trim();
   const [screen, setScreen] = useState<Screen>();
   const [searchText, setSearchText] = useState("");
 
@@ -51,19 +45,11 @@ const BARTDepartures = () => {
   }
 
   if (screen.name === SCREEN.STATIONS) {
-    return (
-      <StationPicker
-        apiKey={apiKey}
-        onSelect={selectStation}
-        searchText={searchText}
-        onSearchTextChange={setSearchText}
-      />
-    );
+    return <StationPicker onSelect={selectStation} searchText={searchText} onSearchTextChange={setSearchText} />;
   }
 
   return (
     <DeparturesList
-      apiKey={apiKey}
       station={screen.station}
       searchText={searchText}
       onSearchTextChange={setSearchText}
@@ -73,17 +59,15 @@ const BARTDepartures = () => {
 };
 
 const StationPicker = ({
-  apiKey,
   onSelect,
   searchText,
   onSearchTextChange,
 }: {
-  apiKey: string;
   onSelect: (station: Station) => Promise<void>;
   searchText: string;
   onSearchTextChange: (text: string) => void;
 }) => {
-  const loadStations = useCallback(() => fetchStations(apiKey), [apiKey]);
+  const loadStations = useCallback(() => fetchStations(), []);
   const { data: stations, error, isLoading, reload } = useResource(loadStations);
 
   return (
@@ -125,19 +109,17 @@ const StationPicker = ({
 };
 
 const DeparturesList = ({
-  apiKey,
   station,
   searchText,
   onSearchTextChange,
   onChangeStation,
 }: {
-  apiKey: string;
   station: Station;
   searchText: string;
   onSearchTextChange: (text: string) => void;
   onChangeStation: () => void;
 }) => {
-  const loadDepartures = useCallback(() => fetchDepartures(apiKey, station.abbr), [apiKey, station.abbr]);
+  const loadDepartures = useCallback(() => fetchDepartures(station.abbr), [station.abbr]);
   const { data: departures, error, isLoading, reload } = useResource(loadDepartures);
   const actions = <DepartureActions onRefresh={reload} onChangeStation={onChangeStation} />;
 

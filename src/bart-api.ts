@@ -19,6 +19,10 @@ type JsonRecord = Record<string, unknown>;
 
 const API_BASE_URL = "https://api.bart.gov/api/";
 const REQUEST_TIMEOUT_MS = 10_000;
+// This is a public API token that is easy to rotate. Feel free to use it if you want or apply for your own at
+// https://www.bart.gov/schedules/developers/api
+// Keep the repository value empty; a maintainer may set a local token here without exposing it in source control.
+const BART_API_KEY = "ZJAY-5AUJ-9IWT-DWEI";
 
 export class BARTApiError extends Error {
   constructor(message: string) {
@@ -27,8 +31,8 @@ export class BARTApiError extends Error {
   }
 }
 
-export const fetchStations = async (apiKey: string): Promise<Station[]> => {
-  const root = await requestBART(apiKey, "stn.aspx", { cmd: "stns" });
+export const fetchStations = async (): Promise<Station[]> => {
+  const root = await requestBART("stn.aspx", { cmd: "stns" });
   const stationsContainer = asRecord(root.stations);
   const stations = asArray(stationsContainer?.station)
     .reduce<Station[]>((validStations, stationValue) => {
@@ -45,8 +49,8 @@ export const fetchStations = async (apiKey: string): Promise<Station[]> => {
   return stations;
 };
 
-export const fetchDepartures = async (apiKey: string, stationAbbr: string): Promise<Departure[]> => {
-  const root = await requestBART(apiKey, "etd.aspx", { cmd: "etd", orig: stationAbbr });
+export const fetchDepartures = async (stationAbbr: string): Promise<Departure[]> => {
+  const root = await requestBART("etd.aspx", { cmd: "etd", orig: stationAbbr });
   const departures: Departure[] = [];
 
   for (const stationValue of asArray(root.station)) {
@@ -88,13 +92,13 @@ export const fetchDepartures = async (apiKey: string, stationAbbr: string): Prom
   });
 };
 
-const requestBART = async (
-  apiKey: string,
-  endpoint: string,
-  parameters: Record<string, string>,
-): Promise<JsonRecord> => {
+const requestBART = async (endpoint: string, parameters: Record<string, string>): Promise<JsonRecord> => {
+  if (!BART_API_KEY) {
+    throw new BARTApiError("BART API access is not configured.");
+  }
+
   const url = new URL(endpoint, API_BASE_URL);
-  url.search = new URLSearchParams({ ...parameters, key: apiKey, json: "y" }).toString();
+  url.search = new URLSearchParams({ ...parameters, key: BART_API_KEY, json: "y" }).toString();
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
