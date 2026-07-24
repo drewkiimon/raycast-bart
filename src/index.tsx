@@ -141,7 +141,7 @@ const DeparturesList = ({
       isLoading={isLoading}
       filtering
       searchText={searchText}
-      searchBarPlaceholder="Filter departures"
+      searchBarPlaceholder={`Filter departures from ${station.name}`}
       onSearchTextChange={onSearchTextChange}
     >
       {error ? (
