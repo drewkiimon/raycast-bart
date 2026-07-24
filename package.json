@@ -5,6 +5,7 @@
   "description": "View real-time BART departures for a selected station",
   "icon": "bart.png",
   "author": "drewkiimon",
+  "owner": "unknowndate",
   "categories": [
     "Productivity"
   ],
@@ -35,6 +36,7 @@
     "build": "ray build -e dist",
     "dev": "ray develop",
     "fix-lint": "ray lint --fix",
-    "lint": "ray lint"
+    "lint": "ray lint",
+    "publish": "ray publish"
   }
 }
