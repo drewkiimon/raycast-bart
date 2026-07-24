@@ -2,6 +2,10 @@
 
 View real-time BART departures for a selected station in Raycast.
 
+## Raycast App
+
+https://www.raycast.com/unknowndate/bart-departures
+
 ## Local setup
 
 1. Run `npm install`.

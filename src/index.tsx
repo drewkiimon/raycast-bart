@@ -175,16 +175,17 @@ const DepartureItem = ({
   actions: React.ReactNode;
 }) => {
   const line = departure.line === 'Unknown' ? departure.line : `${capitalize(departure.line)} Line`;
+  const tintColor = getLineColor(departure.line);
   const accessories: List.Item.Accessory[] = [
     { text: formatMinutes(departure.minutes) },
-    { icon: { source: Icon.CircleFilled, tintColor: getLineColor(departure.line) }, text: line },
+    { icon: { source: Icon.CircleFilled, tintColor }, text: line },
     ...(departure.platform ? [{ text: `Platform ${departure.platform}` }] : []),
     ...(departure.direction ? [{ text: departure.direction }] : []),
   ];
 
   return (
     <List.Item
-      icon={Icon.Train}
+      icon={{ source: Icon.Train, tintColor }}
       title={departure.destination}
       accessories={accessories}
       actions={actions}
