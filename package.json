@@ -1,11 +1,13 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
   "name": "bart-departures",
+  "version": "1.0.0",
   "title": "BART Departures",
   "description": "View real-time BART departures for a selected station",
   "icon": "bart.png",
   "author": "drewkiimon",
   "owner": "unknowndate",
+  "access": "public",
   "categories": [
     "Productivity"
   ],
