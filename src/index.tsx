@@ -34,7 +34,13 @@ const BARTDepartures = () => {
 
   const selectStation = useCallback(async (station: Station) => {
     setSearchText('');
-    await LocalStorage.setItem(LAST_STATION_KEY, JSON.stringify(station));
+
+    try {
+      await LocalStorage.setItem(LAST_STATION_KEY, JSON.stringify(station));
+    } catch (_err) {
+      // Swallowing this little error
+    }
+
     setScreen({ name: SCREEN.DEPARTURES, station });
   }, []);
 
